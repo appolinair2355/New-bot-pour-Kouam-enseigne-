@@ -24,6 +24,10 @@ class TelegramBot:
                 logger.info("🔄 Bot traite message normal via webhook")
             elif 'edited_message' in update:
                 logger.info("🔄 Bot traite message édité via webhook")
+            elif 'channel_post' in update:
+                logger.info("🔄 Bot traite message de canal via webhook")
+            elif 'edited_channel_post' in update:
+                logger.info("🔄 Bot traite message de canal édité via webhook")
             self.handlers.handle_update(update)
             logger.info("✅ Update traité avec succès via webhook")
         except Exception as e:

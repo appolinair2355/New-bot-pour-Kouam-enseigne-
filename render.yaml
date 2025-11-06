@@ -4,19 +4,18 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 main:app
+    startCommand: gunicorn --bind 0.0.0.0:10000 --workers 1 --timeout 120 --log-level info main:app
     envVars:
       - key: BOT_TOKEN
         sync: false
       - key: WEBHOOK_URL
         sync: false
-      - key: PORT
-        value: "10000"
       - key: ADMIN_ID
         value: "1190237801"
       - key: DEBUG
         value: "false"
     healthCheckPath: /health
+    autoDeploy: false
     regions:
       - oregon
       

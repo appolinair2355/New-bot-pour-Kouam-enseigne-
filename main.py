@@ -26,6 +26,7 @@ def webhook():
     try:
         update = request.get_json()
         if update:
+            logger.info(f"📩 Received update: {list(update.keys())}")
             bot.handle_update(update)
         return 'OK', 200
     except Exception as e:
@@ -59,6 +60,7 @@ def setup_webhook():
 
 if __name__ == '__main__':
     setup_webhook()
-    port = int(os.environ.get("PORT", 10000))
+    port = config.PORT
+    logger.info(f"🚀 Démarrage du serveur sur le port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
   

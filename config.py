@@ -13,8 +13,10 @@ class Config:
             logger.error("❌ BOT_TOKEN not found in environment variables")
             raise ValueError("BOT_TOKEN environment variable is required")
 
-        self.WEBHOOK_URL = os.getenv('WEBHOOK_URL', f'https://{os.getenv("REPL_SLUG", "")}.{os.getenv("REPL_OWNER", "")}.repl.co')
-        self.PORT = int(os.getenv('PORT') or 10000)
+        replit_domains = os.getenv('REPLIT_DOMAINS', '')
+        default_webhook = f'https://{replit_domains}' if replit_domains else ''
+        self.WEBHOOK_URL = os.getenv('WEBHOOK_URL', default_webhook)
+        self.PORT = int(os.getenv('PORT', '5000'))
         self.PREDICTION_CHANNEL_ID = -1002875505624
         self.DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
