@@ -10,18 +10,21 @@ from typing import Optional, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Fixed prediction rules
+# 🎴 Règles de Prédiction
+# Quand le bot détecte une de ces cartes dans une partie terminée (avec ✅ ou 🔰),
+# il prédit automatiquement le symbole pour la partie +2 :
 PREDICTION_RULES = {
-    "10♦️": "♠️",
-    "10♠️": "❤️",
-    "9♣️": "❤️",
-    "9♦️": "♠️",
-    "8♣️": "♠️",
-    "8♠️": "♣️",
-    "7♠️": "♠️",
-    "7♣️": "♣️",
-    "6♦️": "♣️",
-    "6♣️": "♦️"
+    # Carte détectée → Symbole prédit
+    "10♦️": "♠️",  # 10♦️ → ♠️ (Pique)
+    "10♠️": "❤️",  # 10♠️ → ❤️ (Cœur)
+    "9♣️": "❤️",  # 9♣️ → ❤️ (Cœur)
+    "9♦️": "♠️",  # 9♦️ → ♠️ (Pique)
+    "8♣️": "♠️",  # 8♣️ → ♠️ (Pique)
+    "8♠️": "♣️",  # 8♠️ → ♣️ (Trèfle)
+    "7♠️": "♠️",  # 7♠️ → ♠️ (Pique)
+    "7♣️": "♣️",  # 7♣️ → ♣️ (Trèfle)
+    "6♦️": "♣️",  # 6♦️ → ♣️ (Trèfle)
+    "6♣️": "♦️"   # 6♣️ → ♦️ (Carreau)
 }
 
 TARGET_CHANNEL_ID = -1002682552255
@@ -168,6 +171,7 @@ class CardPredictor:
 
             logger.info(f"📊 PRÉDICTION EN ATTENTE: Partie {predicted_game} → {predicted_costume}")
 
+            # ⏰ Système de vérification
             # Vérifier prédit+0, prédit+1, prédit+2, prédit+3
             for offset in range(0, 4):
                 target_game = predicted_game + offset
@@ -175,6 +179,10 @@ class CardPredictor:
                     logger.info(f"🎯 MATCH! Partie #{game_number} = Prédit+{offset} (base: #{predicted_game})")
                     
                     if self.check_costume_in_first_parentheses(text, predicted_costume):
+                        # ✅0️⃣ = réussi à prédit+0
+                        # ✅1️⃣ = réussi à prédit+1
+                        # ✅2️⃣ = réussi à prédit+2
+                        # ✅3️⃣ = réussi à prédit+3
                         status_symbol = f"✅{offset}️⃣"
                         original_message = f"🔵{predicted_game}🔵:{predicted_costume}statut :⏳"
                         updated_message = f"🔵{predicted_game}🔵:{predicted_costume}statut :{status_symbol}"
@@ -197,6 +205,7 @@ class CardPredictor:
                             # Si on a vérifié jusqu'à +3 sans succès, c'est un échec
                             logger.warning(f"❌ Costume non trouvé après vérification +0 à +3")
             
+            # ❌ = échec (pas trouvé dans les 4 parties)
             # Si game_number > predicted_game + 3, la prédiction a échoué
             if game_number > predicted_game + 3:
                 original_message = f"🔵{predicted_game}🔵:{predicted_costume}statut :⏳"
