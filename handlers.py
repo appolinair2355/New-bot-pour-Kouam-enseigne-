@@ -18,7 +18,7 @@ user_message_counts = defaultdict(list)
 TARGET_CHANNEL_ID = -1002682552255
 
 # Target channel ID for predictions and updates
-PREDICTION_CHANNEL_ID = -1002887687164
+PREDICTION_CHANNEL_ID = -1002875505624
 
 # Configuration constants
 GREETING_MESSAGE = """
