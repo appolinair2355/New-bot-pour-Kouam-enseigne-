@@ -13,3 +13,9 @@ services:
       - key: PORT
         value: "10000"
       - key: ADMIN_ID
+        value: "1190237801"
+      - key: DEBUG
+        value: "false"
+    healthCheckPath: /health
+    regions:
+      - oregon

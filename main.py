@@ -71,7 +71,7 @@ def setup_webhook():
     try:
         # Utiliser l'URL configurée dans Config
         webhook_url = config.WEBHOOK_URL
-        if webhook_url:
+        if webhook_url and webhook_url != "https://.repl.co":
             full_webhook_url = f"{webhook_url}/webhook"
             logger.info(f"🔗 Configuration webhook: {full_webhook_url}")
 
@@ -83,7 +83,7 @@ def setup_webhook():
             else:
                 logger.error("❌ Échec configuration webhook")
         else:
-            logger.warning("⚠️ WEBHOOK_URL non configurée")
+            logger.warning("⚠️ WEBHOOK_URL non configurée, mode polling recommandé pour le développement")
             logger.info("💡 Pour activer le webhook, configurez la variable WEBHOOK_URL")
     except Exception as e:
         logger.error(f"❌ Erreur configuration webhook: {e}")
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     setup_webhook()
 
     # Get port from environment (render.com provides this)
-    port = int(os.getenv('PORT', 10000))
+    port = int(os.getenv('PORT') or 5000)
 
     # Run the Flask app
     app.run(host='0.0.0.0', port=port, debug=False)
