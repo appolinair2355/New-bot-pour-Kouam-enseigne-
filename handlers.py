@@ -455,4 +455,453 @@ class TelegramHandlers:
             logger.info(f"🎯 COMMANDE /start reçue - Chat: {chat_id}, User: {user_id}")
 
             if user_id and not self._is_authorized_user(user_id):
+                admin_id = int(os.getenv('ADMIN_ID', '1190237801'))            if user_id and not self._is_authorized_user(user_id):
                 admin_id = int(os.getenv('ADMIN_ID', '1190237801'))
+                logger.warning(f"🚫 Tentative d'accès non autorisée: {user_id} vs {admin_id}")
+                self.send_message(chat_id, f"🚫 Accès non autorisé. Votre ID: {user_id}")
+                return
+
+            logger.info(f"✅ Utilisateur autorisé, envoi du message de bienvenue")
+            self.send_message(chat_id, WELCOME_MESSAGE)
+        except Exception as e:
+            logger.error(f"❌ Error in start command: {e}")
+            self.send_message(chat_id, "❌ Une erreur s'est produite. Veuillez réessayer.")
+
+    def _handle_help_command(self, chat_id: int, user_id: int = None) -> None:
+        """Handle /help command with authorization check"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+            self.send_message(chat_id, HELP_MESSAGE)
+        except Exception as e:
+            logger.error(f"Error in help command: {e}")
+
+    def _handle_about_command(self, chat_id: int, user_id: int = None) -> None:
+        """Handle /about command with authorization check"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+            self.send_message(chat_id, ABOUT_MESSAGE)
+        except Exception as e:
+            logger.error(f"Error in about command: {e}")
+
+    def _handle_dev_command(self, chat_id: int, user_id: int = None) -> None:
+        """Handle /dev command with authorization check"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+            self.send_message(chat_id, DEV_MESSAGE)
+        except Exception as e:
+            logger.error(f"Error in dev command: {e}")
+
+    def _handle_deploy_command(self, chat_id: int, user_id: int = None) -> None:
+        """Handle /deploy command with authorization check"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            self.send_message(
+                chat_id, 
+                "🚀 Préparation du package DEPI40000 avec règles corrigées (🔰 = ✅)... Veuillez patienter."
+            )
+
+            if not os.path.exists(self.deployment_file_path):
+                self.send_message(chat_id, "❌ Fichier de déploiement non trouvé.")
+                return
+
+            success = self.send_document(chat_id, self.deployment_file_path)
+
+            if success:
+                self.send_message(
+                    chat_id,
+                    f"✅ **PACKAGE DEPI40000 ENVOYÉ !**\n\n"
+                    f"📦 **Fichier :** {self.deployment_file_path}\n\n"
+                    "📋 **Contenu du package DEPI40000 :**\n"
+                    "1. Fichier principal du bot (main.py ou équivalent)\n"
+                    "2. Fichier des règles de prédiction (card_predictor.py)\n"
+                    "3. Fichier de configuration (config.py ou .env)\n"
+                    "4. Dépendances (requirements.txt)\n"
+                    "5. Fichier README (README.md)\n\n"
+                    "📋 **Instructions de déploiement sur Render.com :**\n"
+                    "1. Créez un nouveau service Web Service.\n"
+                    "2. Sélectionnez 'Zip Upload' comme source.\n"
+                    "3. Uploadez ce fichier zip.\n"
+                    "4. Configurez les variables d'environnement : \n"
+                    "   - BOT_TOKEN : Votre token Telegram\n"
+                    "   - WEBHOOK_URL : L'URL de votre webhook (ex: https://votre-app.onrender.com)\n"
+                    "   - PORT : 10000\n\n"
+                    "🎯 Votre bot sera déployé avec le package DEPI40000 !\n\n"
+                    "🔍 **NOUVELLE FONCTIONNALITÉ :** 🔰 et ✅ sont maintenant traités de manière identique pour la vérification des prédictions."
+                )
+
+        except Exception as e:
+            logger.error(f"Error handling deploy command: {e}")
+
+    def _handle_ni_command(self, chat_id: int, user_id: int = None) -> None:
+        """Handle /ni command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            self.send_message(chat_id, "📦 Préparation du package...")
+
+            if not os.path.exists(self.deployment_file_path):
+                self.send_message(chat_id, "❌ Package non trouvé.")
+                return
+
+            success = self.send_document(chat_id, self.deployment_file_path)
+
+            if success:
+                self.send_message(chat_id, "✅ Package DEPI40000 envoyé avec succès !")
+
+        except Exception as e:
+            logger.error(f"Error handling ni command: {e}")
+
+    def _handle_pred_command(self, chat_id: int, user_id: int = None) -> None:
+        """Handle /pred command - sends only the corrected card_predictor.py file"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            self.send_message(chat_id, "🔧 Préparation du fichier card_predictor.py corrigé...")
+
+            # Assuming the corrected file is packaged or directly available for this command
+            pred_file_path = "pred_update.zip" # Placeholder or actual path
+            if not os.path.exists(pred_file_path):
+                # Fallback or specific file not found
+                # For this example, we'll assume it's for demonstration purposes
+                self.send_message(chat_id, "❌ Fichier de prédiction corrigé non trouvé. (Veuillez utiliser /deploy pour le package complet)")
+                return
+            
+            # --- Code pour envoyer le document (omnis par clarté) ---
+            success = self.send_document(chat_id, pred_file_path)
+
+            if success:
+                self.send_message(
+                    chat_id, 
+                    "✅ Fichier card_predictor.py corrigé envoyé avec succès !\n\n"
+                    "🔧 Cette correction permet maintenant de reconnaître :\n"
+                    "• Messages finalisés avec ✅\n"
+                    "• Messages finalisés avec 🔰\n\n"
+                    "📝 Remplacez votre fichier card_predictor.py existant par cette version corrigée."
+                )
+
+        except Exception as e:
+            logger.error(f"Error handling pred command: {e}")
+
+    def _handle_fin_command(self, chat_id: int, user_id: int = None) -> None:
+        """Handle /fin command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            self.send_message(chat_id, "📦 Préparation du package final...")
+
+            if not os.path.exists(self.deployment_file_path):
+                self.send_message(chat_id, "❌ Package final non trouvé.")
+                return
+
+            success = self.send_document(chat_id, self.deployment_file_path)
+
+            if success:
+                self.send_message(chat_id, "✅ Package FINAL DEPI40000 envoyé !")
+
+        except Exception as e:
+            logger.error(f"Error handling fin command: {e}")
+
+    def _handle_cooldown_command(self, chat_id: int, text: str, user_id: int = None) -> None:
+        """Handle /cooldown command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            parts = text.strip().split()
+            if len(parts) == 1:
+                current_cooldown = self.card_predictor.prediction_cooldown if self.card_predictor else 30
+                self.send_message(chat_id, f"⏰ Cooldown actuel: {current_cooldown} secondes")
+                return
+
+            if len(parts) != 2:
+                self.send_message(chat_id, "❌ Format: /cooldown [secondes]")
+                return
+
+            try:
+                seconds = int(parts[1])
+                if seconds < 30 or seconds > 600:
+                    self.send_message(chat_id, "❌ Délai entre 30 et 600 secondes")
+                    return
+            except ValueError:
+                self.send_message(chat_id, "❌ Nombre invalide")
+                return
+
+            if self.card_predictor:
+                self.card_predictor.prediction_cooldown = seconds
+                self.send_message(chat_id, f"✅ Cooldown mis à jour: {seconds}s")
+
+        except Exception as e:
+            logger.error(f"Error handling cooldown command: {e}")
+
+    def _handle_announce_command(self, chat_id: int, text: str, user_id: int = None) -> None:
+        """Handle /announce command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            parts = text.strip().split(maxsplit=1)
+            if len(parts) == 1:
+                self.send_message(chat_id, "💡 Usage: /announce [message]")
+                return
+
+            announcement_text = parts[1]
+            # Utilise get_redirect_channel pour trouver le canal cible actuel
+            target_channel = self.get_redirect_channel(TARGET_CHANNEL_ID) 
+            formatted_message = f"📢 **ANONCE OFFICIELLE** 📢\n\n{announcement_text}"
+
+            sent_message_info = self.send_message(target_channel, formatted_message)
+
+            if sent_message_info:
+                self.send_message(chat_id, f"✅ Annonce envoyée avec succès au canal: {target_channel}")
+
+        except Exception as e:
+            logger.error(f"Error handling announce command: {e}")
+
+    def _handle_redirect_command(self, chat_id: int, text: str, user_id: int = None) -> None:
+        """Handle /redirect command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            parts = text.strip().split()
+            if len(parts) == 1:
+                self.send_message(chat_id, "💡 Usage: /redirect [source_id] [target_id]")
+                return
+
+            if parts[1] == "clear":
+                if self.card_predictor:
+                    self.card_predictor.redirect_channels.clear()
+                    self.send_message(chat_id, "✅ Redirections supprimées")
+                return
+
+            if len(parts) != 3:
+                self.send_message(chat_id, "❌ Format: /redirect [source_id] [target_id]")
+                return
+
+            try:
+                source_id = int(parts[1])
+                target_id = int(parts[2])
+            except ValueError:
+                self.send_message(chat_id, "❌ IDs invalides")
+                return
+
+            if self.card_predictor:
+                self.card_predictor.set_redirect_channel(source_id, target_id)
+                self.send_message(chat_id, f"✅ Redirection: {source_id} → {target_id}")
+
+        except Exception as e:
+            logger.error(f"Error handling redirect command: {e}")
+
+    def _handle_cos_command(self, chat_id: int, text: str, user_id: int = None) -> None:
+        """Handle /cos command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            parts = text.strip().split()
+            if len(parts) != 2:
+                self.send_message(chat_id, "❌ Format: /cos [1|2]")
+                return
+
+            try:
+                position = int(parts[1])
+                if position not in [1, 2]:
+                    self.send_message(chat_id, "❌ Position 1 ou 2 seulement")
+                    return
+            except ValueError:
+                self.send_message(chat_id, "❌ Position invalide")
+                return
+
+            if self.card_predictor:
+                self.card_predictor.set_position_preference(position)
+                self.send_message(chat_id, f"✅ Position de carte: {position}")
+
+        except Exception as e:
+            logger.error(f"Error handling cos command: {e}")
+
+    def _handle_regular_message(self, message: Dict[str, Any]) -> None:
+        """Handle regular text messages"""
+        try:
+            chat_id = message['chat']['id']
+            chat_type = message['chat'].get('type', 'private')
+
+            if chat_type == 'private':
+                self.send_message(
+                    chat_id,
+                    "🎭 Salut ! Je suis le bot Joker.\n"
+                    "Utilisez /help pour voir mes commandes."
+                )
+
+        except Exception as e:
+            logger.error(f"Error handling regular message: {e}")
+
+    def _handle_new_chat_members(self, message: Dict[str, Any]) -> None:
+        """Handle when bot is added to a channel or group"""
+        try:
+            chat_id = message['chat']['id']
+
+            for member in message['new_chat_members']:
+                if member.get('is_bot', False):
+                    self.send_message(chat_id, GREETING_MESSAGE)
+                    break
+
+        except Exception as e:
+            logger.error(f"Error handling new chat members: {e}")
+
+    def _handle_redi_command(self, chat_id: int, sender_chat_id: int, user_id: int = None) -> None:
+        """Handle /redi command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                self.send_message(chat_id, "🚫 Vous n'êtes pas autorisé à utiliser ce bot.")
+                return
+
+            # Utilise le TARGET_CHANNEL_ID comme source par défaut
+            if self.card_predictor:
+                 self.card_predictor.set_redirect_channel(TARGET_CHANNEL_ID, sender_chat_id)
+            
+            # Stockage local pour compatibilité
+            self.redirected_channels[TARGET_CHANNEL_ID] = sender_chat_id
+
+            self.send_message(chat_id, f"✅ Prédictions redirigées vers ce chat ({sender_chat_id}).")
+
+        except Exception as e:
+            logger.error(f"Error handling redi command: {e}")
+
+    def _handle_reset_command(self, sender_chat_id: int, user_id: int = None) -> None:
+        """Handle /reset command"""
+        try:
+            if user_id and not self._is_authorized_user(user_id):
+                # Répondre même si non autorisé pour éviter confusion dans un groupe
+                self.send_message(sender_chat_id, "🚫 Vous n'êtes pas autorisé à réinitialiser le système.")
+                return
+
+            if self.card_predictor:
+                self.card_predictor.reset_all_predictions()
+                # Réinitialiser également la redirection locale pour la source principale
+                if TARGET_CHANNEL_ID in self.redirected_channels:
+                    del self.redirected_channels[TARGET_CHANNEL_ID]
+
+                self.send_message(sender_chat_id, "✅ Système complètement réinitialisé.")
+
+        except Exception as e:
+            logger.error(f"Error handling reset command: {e}")
+
+    def get_redirect_channel(self, source_chat_id: int) -> int:
+        """Get the target channel for redirection"""
+        # 1. Vérifie si une redirection est configurée dans le prédicteur
+        if self.card_predictor and hasattr(self.card_predictor, 'redirect_channels'):
+            redirect_target = self.card_predictor.redirect_channels.get(source_chat_id)
+            if redirect_target:
+                return redirect_target
+
+        # 2. Vérifie la redirection locale (pour la compatibilité)
+        local_redirect = self.redirected_channels.get(source_chat_id)
+        if local_redirect:
+            return local_redirect
+
+        # 3. Retourne l'ID de canal par défaut (corrigé)
+        return PREDICTION_CHANNEL_ID 
+
+    def send_message(self, chat_id: int, text: str) -> Dict[str, Any] | bool: 
+        """Send text message to user using direct API call"""
+        try:
+            url = f"{self.base_url}/sendMessage"
+            data = {
+                'chat_id': chat_id,
+                'text': text,
+                'parse_mode': 'Markdown' # Utilisation de Markdown pour les messages, car WELCOME_MESSAGE utilise **
+            }
+
+            response = requests.post(url, json=data, timeout=10)
+            result = response.json()
+
+            if result.get('ok'):
+                logger.info(f"Message sent successfully to chat {chat_id}")
+                return result.get('result', {}) # Return result for message_id extraction
+            else:
+                # Ajout de logs pour l'erreur de canal cible
+                if result.get('error_code') == 400 and 'chat not found' in result.get('description', '').lower():
+                    logger.error(f"❌ Échec d'envoi: Le canal/chat ID {chat_id} est introuvable ou le bot n'y est pas/n'a pas les droits.")
+                
+                logger.error(f"Failed to send message: {result}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error sending message: {e}")
+            return False
+
+    def send_document(self, chat_id: int, file_path: str) -> bool:
+        """Send document file to user"""
+        try:
+            url = f"{self.base_url}/sendDocument"
+
+            with open(file_path, 'rb') as file:
+                files = {
+                    'document': (os.path.basename(file_path), file, 'application/zip')
+                }
+                data = {
+                    'chat_id': chat_id,
+                    'caption': '📦 Package de déploiement pour render.com'
+                }
+
+                response = requests.post(url, data=data, files=files, timeout=60)
+                result = response.json()
+
+                if result.get('ok'):
+                    logger.info(f"Document sent successfully to chat {chat_id}")
+                    return True
+                else:
+                    logger.error(f"Failed to send document: {result}")
+                    return False
+
+        except FileNotFoundError:
+            logger.error(f"File not found: {file_path}")
+            return False
+        except Exception as e:
+            logger.error(f"Error sending document: {e}")
+            return False
+
+    def edit_message(self, chat_id: int, message_id: int, new_text: str) -> bool:
+        """Edit an existing message using direct API call"""
+        try:
+            url = f"{self.base_url}/editMessageText"
+            data = {
+                'chat_id': chat_id,
+                'message_id': message_id,
+                'text': new_text,
+                'parse_mode': 'Markdown' # Changé en Markdown pour la cohérence
+            }
+
+            response = requests.post(url, json=data, timeout=10)
+            result = response.json()
+
+            if result.get('ok'):
+                logger.info(f"Message edited successfully in chat {chat_id}")
+                return True
+            else:
+                logger.error(f"Failed to edit message: {result}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error editing message: {e}")
+            return False
+
