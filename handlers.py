@@ -18,7 +18,7 @@ user_message_counts = defaultdict(list)
 TARGET_CHANNEL_ID = -1002682552255
 
 # Target channel ID for predictions and updates
-PREDICTION_CHANNEL_ID = -1002875505624 # NOUVEAU CANAL CIBLE : -1002875505624
+PREDICTION_CHANNEL_ID = -1002875505624 # <<< CORRECTION EFFECTUÉE ICI
 
 # Configuration constants
 GREETING_MESSAGE = """
@@ -44,19 +44,86 @@ WELCOME_MESSAGE = """
 • `/cooldown [secondes]` - Délai entre prédictions  
 • `/redirect` - Redirection des prédictions
 • `/announce [message]` - Annonce officielle
-• `/reset` - Réinitialisation du système
+• `/reset` - Réinitialiser le système
+
+🔮 **FONCTIONNALITÉS SPÉCIALES:**
+✓ Prédictions automatiques avec cooldown configurable
+✓ Analyse des combinaisons de cartes en temps réel
+✓ Système de vérification séquentiel avancé
+✓ Redirection multi-canaux flexible
+✓ Accès sécurisé avec autorisation utilisateur
+
+🎯 **Version DEPLOY299999 - Port 10000**
 """
 
 HELP_MESSAGE = """
-... (contenu inchangé) ...
+🎯 **GUIDE D'UTILISATION DU BOT JOKER** 🔮
+
+📝 **COMMANDES DE BASE:**
+• `/start` - Message d'accueil
+• `/help` - Afficher cette aide
+• `/about` - Informations sur le bot
+• `/dev` - Contact développeur
+• `/deploy` - Package de déploiement
+• `/ni` - Package modifié
+• `/fin` - Package final complet
+
+🔧 **COMMANDES DE CONFIGURATION:**
+• `/cos [1|2]` - Position de carte pour prédictions
+• `/cooldown [secondes]` - Modifier le délai entre prédictions
+• `/redirect [source] [target]` - Redirection avancée des prédictions
+• `/redi` - Redirection rapide vers le chat actuel
+• `/announce [message]` - Envoyer une annonce officielle
+• `/reset` - Réinitialiser toutes les prédictions
+
+🔮 Fonctionnalités avancées :
+- Le bot analyse automatiquement les messages contenant des combinaisons de cartes
+- Il fait des prédictions basées sur les patterns détectés
+- Gestion intelligente des messages édités
+- Support des canaux et groupes
+- Configuration personnalisée de la position de carte
+
+🎴 Format des cartes :
+Le bot reconnaît les symboles : ♠️ ♥️ ♦️ ♣️
+
+📊 Le bot peut traiter les messages avec format #nXXX pour identifier les jeux.
+
+🎯 Configuration des prédictions :
+• /cos 1 - Utiliser la première carte
+• /cos 2 - Utiliser la deuxième carte
+⚠️ Si les deux premières cartes ont le même costume, la troisième sera utilisée automatiquement.
 """
 
 ABOUT_MESSAGE = """
-... (contenu inchangé) ...
+🎭 Bot Joker - Prédicteur de Cartes
+
+🤖 Version : 2.0
+🛠️ Développé avec Python et l'API Telegram
+🔮 Spécialisé dans l'analyse de combinaisons de cartes
+
+✨ Fonctionnalités :
+- Prédictions automatiques
+- Analyse de patterns
+- Support multi-canaux
+- Interface intuitive
+
+🌟 Créé pour améliorer votre expérience de jeu !
 """
 
 DEV_MESSAGE = """
-... (contenu inchangé) ...
+👨‍💻 Informations Développeur :
+
+🔧 Technologies utilisées :
+- Python 3.11+
+- API Telegram Bot
+- Flask pour les webhooks
+- Déployé sur Render.com
+
+📧 Contact : 
+Pour le support technique ou les suggestions d'amélioration, 
+contactez l'administrateur du bot.
+
+🚀 Le bot est open source et peut être déployé facilement !
 """
 
 MAX_MESSAGES_PER_MINUTE = 30
@@ -65,17 +132,18 @@ RATE_LIMIT_WINDOW = 60
 def is_rate_limited(user_id: int) -> bool:
     """Check if user is rate limited"""
     now = datetime.now()
-    # Clean up old timestamps
-    user_message_counts[user_id] = [
-        t for t in user_message_counts[user_id] 
-        if t > now - timedelta(seconds=RATE_LIMIT_WINDOW)
-    ]
-    
-    if len(user_message_counts[user_id]) >= MAX_MESSAGES_PER_MINUTE:
-        logger.warning(f"RATE LIMIT: User {user_id} exceeded limit.")
+    user_messages = user_message_counts[user_id]
+
+    # Remove old messages outside the window
+    user_messages[:] = [msg_time for msg_time in user_messages 
+                       if now - msg_time < timedelta(seconds=RATE_LIMIT_WINDOW)]
+
+    # Check if user exceeded limit
+    if len(user_messages) >= MAX_MESSAGES_PER_MINUTE:
         return True
-    
-    user_message_counts[user_id].append(now)
+
+    # Add current message time
+    user_messages.append(now)
     return False
 
 class TelegramHandlers:
@@ -83,7 +151,7 @@ class TelegramHandlers:
 
     def __init__(self, bot_token: str):
         self.bot_token = bot_token
-        self.base_url = f"https://api.telegram.org/bot{bot_token}" 
+        self.base_url = f"https://api.telegram.org/bot{bot_token}" # Replaced TelegramBot with base_url
         # Import card_predictor locally to avoid circular imports
         try:
             from card_predictor import card_predictor
@@ -99,383 +167,292 @@ class TelegramHandlers:
         self.deployment_file_path = "depi_render_n2_fix.zip"
 
     def handle_update(self, update: Dict[str, Any]) -> None:
-        """Handle incoming Telegram updates"""
-        if 'message' in update:
-            self._handle_message(update['message'])
-        elif 'edited_message' in update:
-            self._handle_edited_message(update['edited_message'])
+        """Handle incoming Telegram update with enhanced webhook support"""
+        try:
+            if 'message' in update:
+                message = update['message']
+                logger.info(f"🔄 Handlers - Traitement message normal")
+                self._handle_message(message)
+            elif 'edited_message' in update:
+                message = update['edited_message']
+                logger.info(f"🔄 Handlers - Traitement message édité pour prédictions/vérifications")
+                self._handle_edited_message(message)
+            else:
+                logger.info(f"⚠️ Type d'update non géré: {list(update.keys())}")
+
+        except Exception as e:
+            logger.error(f"Error handling update: {e}")
 
     def _handle_message(self, message: Dict[str, Any]) -> None:
-        """Process standard message updates"""
-        chat = message.get('chat', {})
-        chat_id = chat.get('id')
-        text = message.get('text', '')
-        message_id = message.get('message_id')
-        user_id = message.get('from', {}).get('id')
-        sender_chat_id = message.get('sender_chat', {}).get('id')
-        
-        if not chat_id:
-            logger.warning("Message without chat_id received.")
-            return
-        
-        # Log message for debugging
-        logger.info(f"Received message from chat {chat_id}: {text[:50]}...")
+        """Handle regular messages"""
+        try:
+            chat_id = message['chat']['id']
+            user_id = message.get('from', {}).get('id')
+            sender_chat = message.get('sender_chat', {})
+            sender_chat_id = sender_chat.get('id', chat_id)
 
-        # Handle system message (e.g., new members)
-        if 'new_chat_members' in message:
-            self._handle_new_chat_members(message)
-            return
-        
-        if is_rate_limited(user_id):
-            return
+            # Rate limiting check (skip for channels/groups)
+            chat_type = message['chat'].get('type', 'private')
+            if user_id and chat_type == 'private' and is_rate_limited(user_id):
+                self.send_message(chat_id, "⏰ Veuillez patienter avant d'envoyer une autre commande.")
+                return
 
-        if text.startswith('/'):
             # Handle commands
-            command = text.split()[0].lower()
-            if command == '/start':
-                self._handle_start_command(chat_id, user_id)
-            elif command == '/help':
-                self._handle_help_command(chat_id, user_id)
-            elif command == '/about':
-                self._handle_about_command(chat_id, user_id)
-            elif command == '/dev':
-                self._handle_dev_command(chat_id, user_id)
-            elif command == '/deploy':
-                self._handle_deploy_command(chat_id, user_id)
-            elif command == '/ni':
-                self._handle_ni_command(chat_id, user_id)
-            elif command == '/pred':
-                self._handle_pred_command(chat_id, user_id)
-            elif command == '/fin':
-                self._handle_fin_command(chat_id, user_id)
-            elif command == '/cooldown':
-                self._handle_cooldown_command(chat_id, text, user_id)
-            elif command == '/announce':
-                self._handle_announce_command(chat_id, text, user_id)
-            elif command == '/redirect':
-                self._handle_redirect_command(chat_id, text, user_id)
-            elif command == '/cos':
-                self._handle_cos_command(chat_id, text, user_id)
-            elif command == '/redi':
-                 self._handle_redi_command(chat_id, sender_chat_id, user_id)
-            elif command == '/reset':
-                 self._handle_reset_command(sender_chat_id, user_id)
-        else:
-            # Handle regular message logic
-            self._handle_regular_message(message)
+            if 'text' in message:
+                text = message['text'].strip()
+
+                if text == '/start':
+                    self._handle_start_command(chat_id, user_id)
+                elif text == '/help':
+                    self._handle_help_command(chat_id, user_id)
+                elif text == '/about':
+                    self._handle_about_command(chat_id, user_id)
+                elif text == '/dev':
+                    self._handle_dev_command(chat_id, user_id)
+                elif text == '/deploy':
+                    self._handle_deploy_command(chat_id, user_id)
+                elif text == '/ni':
+                    self._handle_ni_command(chat_id, user_id)
+                elif text == '/pred':
+                    self._handle_pred_command(chat_id, user_id)
+                elif text.startswith('/cos'):
+                    self._handle_cos_command(chat_id, text, user_id)
+                elif text == '/redi':
+                    self._handle_redi_command(chat_id, sender_chat_id, user_id)
+                elif text == '/reset':
+                    self._handle_reset_command(sender_chat_id, user_id)
+                elif text.startswith('/cooldown'):
+                    self._handle_cooldown_command(chat_id, text, user_id)
+                elif text.startswith('/redirect'):
+                    self._handle_redirect_command(chat_id, text, user_id)
+                elif text.startswith('/announce'):
+                    self._handle_announce_command(chat_id, text, user_id)
+                elif text == '/fin':
+                    self._handle_fin_command(chat_id, user_id)
+                else:
+                    # Handle regular messages - check for card predictions even in regular messages
+                    self._handle_regular_message(message)
+
+                    # Also process for card prediction in channels/groups (for polling mode)
+                    if chat_type in ['group', 'supergroup', 'channel'] and self.card_predictor:
+                        self._process_card_message(message)
+
+                        # NOUVEAU: Vérification sur messages normaux aussi
+                        self._process_verification_on_normal_message(message)
+
+            # Handle new chat members
+            if 'new_chat_members' in message:
+                self._handle_new_chat_members(message)
+
+        except Exception as e:
+            logger.error(f"Error handling message: {e}")
 
     def _handle_edited_message(self, message: Dict[str, Any]) -> None:
-        """Process edited message updates (for verification)"""
-        chat_id = message.get('chat', {}).get('id')
-        text = message.get('text', '')
-        
-        if chat_id == TARGET_CHANNEL_ID and self.card_predictor:
-            logger.info(f"Received EDIT from TARGET_CHANNEL {chat_id}: {text[:50]}...")
-            
-            # 1. Process verification based on the edited message
-            verification_result = self.card_predictor.verify_prediction_from_edit(text)
-            
-            if verification_result and verification_result.get('type') == 'edit_message':
-                self._process_verification_result(verification_result, source_chat_id=TARGET_CHANNEL_ID)
-                
-            # 2. Check if the edited message is now final and can trigger a prediction
-            # This is less likely with the new 10-card rule but kept for robustness
-            self._process_card_message(text, source_chat_id=TARGET_CHANNEL_ID)
+        """Handle edited messages with enhanced webhook processing for predictions and verification"""
+        try:
+            chat_id = message['chat']['id']
+            chat_type = message['chat'].get('type', 'private')
+            user_id = message.get('from', {}).get('id')
+            message_id = message.get('message_id')
+            sender_chat = message.get('sender_chat', {})
+            sender_chat_id = sender_chat.get('id', chat_id)
 
-    def _process_card_message(self, text: str, source_chat_id: int) -> None:
-        """Process messages that might contain card info for prediction"""
-        if self.card_predictor:
-            should_predict, game_number, predicted_costume = self.card_predictor.should_predict(text)
-            
-            if should_predict and game_number is not None and predicted_costume is not None:
-                prediction_text = self.card_predictor.make_prediction(game_number, predicted_costume)
-                
-                # Get redirection channel (default is now -1002875505624)
-                target_chat_id = self.get_redirect_channel(source_chat_id)
-                
-                # Send prediction
-                response = self.send_message(target_chat_id, prediction_text)
-                if response and response.get('ok'):
-                    message_id = response.get('result', {}).get('message_id')
-                    predicted_game = game_number + 2
+            logger.info(f"✏️ WEBHOOK - Message édité reçu ID:{message_id} | Chat:{chat_id} | Sender:{sender_chat_id}")
+
+            # Rate limiting check (skip for channels/groups)
+            if user_id and chat_type == 'private' and is_rate_limited(user_id):
+                return
+
+            # Process edited messages
+            if 'text' in message:
+                text = message['text']
+                logger.info(f"✏️ WEBHOOK - Contenu édité: {text[:100]}...")
+
+                # Skip card prediction if card_predictor is not available
+                if not self.card_predictor:
+                    logger.warning("❌ Card predictor not available")
+                    return
+
+                # Vérifier que c'est du canal autorisé
+                if sender_chat_id != TARGET_CHANNEL_ID:
+                    logger.info(f"🚫 Message édité ignoré - Canal non autorisé: {sender_chat_id}")
+                    return
+
+                logger.info(f"✅ WEBHOOK - Message édité du canal autorisé: {TARGET_CHANNEL_ID}")
+
+                # TRAITEMENT MESSAGES ÉDITÉS AMÉLIORÉ - Prédiction ET Vérification
+                has_completion = self.card_predictor.has_completion_indicators(text)
+                has_bozato = '🔰' in text
+                has_checkmark = '✅' in text
+
+                logger.info(f"🔍 ÉDITION - Finalisation: {has_completion}, 🔰: {has_bozato}, ✅: {has_checkmark}")
+                logger.info(f"🔍 ÉDITION - 🔰 et ✅ sont maintenant traités de manière identique pour la vérification")
+
+                if has_completion:
+                    logger.info(f"🎯 ÉDITION FINALISÉE - Traitement prédiction ET vérification")
+
+                    # SYSTÈME 1: PRÉDICTION AUTOMATIQUE (messages édités avec finalisation)
+                    should_predict, game_number, combination = self.card_predictor.should_predict(text)
+
+                    if should_predict and game_number is not None and combination is not None:
+                        prediction = self.card_predictor.make_prediction(game_number, combination)
+                        logger.info(f"🔮 PRÉDICTION depuis ÉDITION: {prediction}")
+
+                        # Envoyer la prédiction et stocker les informations
+                        target_channel = self.get_redirect_channel(sender_chat_id)
+                        sent_message_info = self.send_message(target_channel, prediction)
+                        if sent_message_info and isinstance(sent_message_info, dict) and 'message_id' in sent_message_info:
+                            target_game = game_number + 2
+                            self.card_predictor.sent_predictions[target_game] = {
+                                'chat_id': target_channel,
+                                'message_id': sent_message_info['message_id']
+                            }
+                            logger.info(f"📝 PRÉDICTION STOCKÉE pour jeu {target_game} vers canal {target_channel}")
+
+                    # SYSTÈME 2: VÉRIFICATION UNIFIÉE (messages édités avec finalisation)
+                    verification_result = self.card_predictor._verify_prediction_common(text, is_edited=True)
+                    if verification_result:
+                        logger.info(f"🔍 ✅ VÉRIFICATION depuis ÉDITION: {verification_result}")
+
+                        if verification_result.get('type') == 'edit_message':
+                            predicted_game = verification_result.get('predicted_game')
+                            new_message = verification_result.get('new_message')
+
+                            # Tenter d'éditer le message de prédiction existant
+                            if predicted_game in self.card_predictor.sent_predictions:
+                                message_info = self.card_predictor.sent_predictions[predicted_game]
+                                edit_success = self.edit_message(
+                                    message_info['chat_id'],
+                                    message_info['message_id'],
+                                    new_message
+                                )
+
+                                if edit_success:
+                                    logger.info(f"🔍 ✅ MESSAGE ÉDITÉ avec succès - Prédiction {predicted_game}")
+                                else:
+                                    logger.error(f"🔍 ❌ ÉCHEC ÉDITION - Prédiction {predicted_game}")
+                            else:
+                                logger.warning(f"🔍 ⚠️ AUCUN MESSAGE STOCKÉ pour {predicted_game}")
+                    else:
+                        logger.info(f"🔍 ⭕ AUCUNE VÉRIFICATION depuis édition")
+
+                # Gestion des messages temporaires
+                elif self.card_predictor.has_pending_indicators(text):
+                    logger.info(f"⏰ WEBHOOK - Message temporaire détecté, en attente de finalisation")
                     if message_id:
-                        # Store sent message ID for potential future edits (verification updates)
-                        self.card_predictor.sent_predictions[predicted_game] = {
-                            'message_id': message_id,
-                            'chat_id': target_chat_id,
-                            'predicted_costume': predicted_costume # Store costume for verification in handlers.py if needed
+                        self.card_predictor.pending_edits[message_id] = {
+                            'original_text': text,
+                            'timestamp': datetime.now()
                         }
-                        logger.info(f"Prediction for game {predicted_game} sent to {target_chat_id} with ID {message_id}")
 
-    def _process_verification_on_normal_message(self, text: str, source_chat_id: int) -> None:
-        """Process messages that might verify a previous prediction"""
-        if self.card_predictor:
-            verification_result = self.card_predictor.verify_prediction(text)
-            
-            if verification_result and verification_result.get('type') == 'edit_message':
-                self._process_verification_result(verification_result, source_chat_id)
+        except Exception as e:
+            logger.error(f"❌ Error handling edited message via webhook: {e}")
 
-    def _process_verification_result(self, result: Dict, source_chat_id: int) -> None:
-        """Handles the outcome of a prediction verification"""
-        predicted_game = result.get('predicted_game')
-        new_message = result.get('new_message')
-        
-        sent_info = self.card_predictor.sent_predictions.get(predicted_game)
-        
-        if sent_info:
-            target_chat_id = sent_info['chat_id']
-            message_id = sent_info['message_id']
-            
-            logger.info(f"Attempting to EDIT message {message_id} in chat {target_chat_id} with new status: {new_message}")
-            self.edit_message(target_chat_id, message_id, new_message)
+    def _process_card_message(self, message: Dict[str, Any]) -> None:
+        """Process message for card prediction (works for both regular and edited messages)"""
+        try:
+            chat_id = message['chat']['id']
+            text = message.get('text', '')
+            sender_chat = message.get('sender_chat', {})
+            sender_chat_id = sender_chat.get('id', chat_id)
+
+            # Only process messages from Baccarat Kouamé channel
+            if sender_chat_id != TARGET_CHANNEL_ID:
+                logger.info(f"🚫 Message ignoré - Canal non autorisé: {sender_chat_id}")
+                return
+
+            if not text or not self.card_predictor:
+                return
+
+            logger.info(f"🎯 Traitement message CANAL AUTORISÉ: {text[:50]}...")
+
+            # Store temporary messages with pending indicators
+            if self.card_predictor.has_pending_indicators(text):
+                message_id = message.get('message_id')
+                if message_id:
+                    self.card_predictor.temporary_messages[message_id] = text
+                    logger.info(f"⏰ Message temporaire stocké: {message_id}")
+
+            # VÉRIFICATION AMÉLIORÉE - Messages normaux avec 🔰 ou ✅
+            has_completion = self.card_predictor.has_completion_indicators(text)
+
+            if has_completion:
+                logger.info(f"🔍 MESSAGE NORMAL avec finalisation: {text[:50]}...")
+                verification_result = self.card_predictor._verify_prediction_common(text, is_edited=False)
+                if verification_result:
+                    logger.info(f"🔍 ✅ VÉRIFICATION depuis MESSAGE NORMAL: {verification_result}")
+
+                    if verification_result['type'] == 'edit_message':
+                        predicted_game = verification_result['predicted_game']
+                        if predicted_game in self.card_predictor.sent_predictions:
+                            message_info = self.card_predictor.sent_predictions[predicted_game]
+                            edit_success = self.edit_message(
+                                message_info['chat_id'],
+                                message_info['message_id'],
+                                verification_result['new_message']
+                            )
+                            if edit_success:
+                                logger.info(f"✅ MESSAGE ÉDITÉ depuis message normal - Prédiction {predicted_game}")
+
+        except Exception as e:
+            logger.error(f"Error processing card message: {e}")
+
+    def _process_verification_on_normal_message(self, message: Dict[str, Any]) -> None:
+        """Process verification on normal messages (not just edited ones)"""
+        try:
+            text = message.get('text', '')
+            chat_id = message['chat']['id']
+            sender_chat = message.get('sender_chat', {})
+            sender_chat_id = sender_chat.get('id', chat_id)
+
+            # Only process messages from Baccarat Kouamé channel
+            if sender_chat_id != TARGET_CHANNEL_ID:
+                return
+
+            if not text or not self.card_predictor:
+                return
+
+            has_completion = self.card_predictor.has_completion_indicators(text)
+
+            if has_completion:
+                verification_result = self.card_predictor._verify_prediction_common(text, is_edited=False)
+                if verification_result:
+                    if verification_result['type'] == 'edit_message':
+                        predicted_game = verification_result['predicted_game']
+
+                        if predicted_game in self.card_predictor.sent_predictions:
+                            message_info = self.card_predictor.sent_predictions[predicted_game]
+                            edit_success = self.edit_message(
+                                message_info['chat_id'],
+                                message_info['message_id'],
+                                verification_result['new_message']
+                            )
+
+        except Exception as e:
+            logger.error(f"❌ Error processing verification on normal message: {e}")
 
     def _is_authorized_user(self, user_id: int) -> bool:
-        """Check if user is authorized to use commands"""
-        # Placeholder for authorization logic
-        # For now, allow all users.
-        return True
+        """Check if user is authorized to use the bot"""
+        # Mode debug : autoriser temporairement plus d'utilisateurs pour tests
+        if os.getenv('DEBUG_MODE', 'false').lower() == 'true':
+            logger.info(f"🔧 MODE DEBUG - Utilisateur {user_id} autorisé temporairement")
+            return True
+
+        # Vérifier l'ID admin depuis les variables d'environnement
+        admin_id = int(os.getenv('ADMIN_ID', '1190237801'))
+        is_authorized = user_id == admin_id
+
+        if is_authorized:
+            logger.info(f"✅ Utilisateur autorisé: {user_id}")
+        else:
+            logger.warning(f"🚫 Utilisateur non autorisé: {user_id} (Admin attendu: {admin_id})")
+
+        return is_authorized
 
     def _handle_start_command(self, chat_id: int, user_id: int = None) -> None:
-        self.send_message(chat_id, GREETING_MESSAGE)
-
-    def _handle_help_command(self, chat_id: int, user_id: int = None) -> None:
-        self.send_message(chat_id, HELP_MESSAGE)
-
-    def _handle_about_command(self, chat_id: int, user_id: int = None) -> None:
-        self.send_message(chat_id, ABOUT_MESSAGE)
-
-    def _handle_dev_command(self, chat_id: int, user_id: int = None) -> None:
-        self.send_message(chat_id, DEV_MESSAGE)
-
-    def _handle_deploy_command(self, chat_id: int, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
-        self.send_document(chat_id, self.deployment_file_path)
-
-    def _handle_ni_command(self, chat_id: int, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
-        self.send_message(chat_id, f"🎯 Position préférée: {self.card_predictor.position_preference}")
-
-    def _handle_pred_command(self, chat_id: int, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
-        predictions_status = "\n".join([
-            f"🔵{game}🔵: {data['predicted_costume']} (statut: {data['status']})"
-            for game, data in self.card_predictor.predictions.items()
-        ])
-        if not predictions_status:
-            predictions_status = "Aucune prédiction en cours."
-        self.send_message(chat_id, f"🔮 **Statut des Prédictions :**\n{predictions_status}")
-
-    def _handle_fin_command(self, chat_id: int, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
-        self.send_message(chat_id, f"⏰ Cooldown actuel: {self.card_predictor.prediction_cooldown} secondes.")
-
-    def _handle_cooldown_command(self, chat_id: int, text: str, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
+        """Handle /start command with authorization check"""
         try:
-            _, value_str = text.split()
-            new_cooldown = int(value_str)
-            if new_cooldown >= 10:
-                self.card_predictor.prediction_cooldown = new_cooldown
-                self.send_message(chat_id, f"✅ Délai de prédiction mis à jour à {new_cooldown} secondes.")
-            else:
-                self.send_message(chat_id, "❌ Le délai doit être d'au moins 10 secondes.")
-        except ValueError:
-            self.send_message(chat_id, "❌ Format invalide. Utilisation: /cooldown [secondes] (ex: /cooldown 300)")
-        except Exception:
-            self.send_message(chat_id, "❌ Format invalide. Utilisation: /cooldown [secondes]")
+            logger.info(f"🎯 COMMANDE /start reçue - Chat: {chat_id}, User: {user_id}")
 
-    def _handle_announce_command(self, chat_id: int, text: str, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
-        try:
-            message_to_send = text.split(maxsplit=1)[1]
-            if not message_to_send.strip():
-                self.send_message(chat_id, "❌ Le message ne peut être vide.")
-                return
-
-            self.send_message(PREDICTION_CHANNEL_ID, f"📢 ANNONCE OFFICIELLE :\n\n{message_to_send}")
-            self.send_message(chat_id, "✅ Annonce envoyée au canal de prédiction.")
-        except IndexError:
-            self.send_message(chat_id, "❌ Format invalide. Utilisation: /announce [message]")
-
-    def _handle_redirect_command(self, chat_id: int, text: str, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
-        try:
-            _, target_chat_id_str = text.split()
-            target_chat_id = int(target_chat_id_str)
-            if target_chat_id < -1000000000000 or target_chat_id > -1000000000:
-                self.send_message(chat_id, "❌ ID de canal invalide. Doit être un ID de canal (commence par -100).")
-                return
-
-            self.card_predictor.set_redirect_channel(TARGET_CHANNEL_ID, target_chat_id)
-            self.redirected_channels[TARGET_CHANNEL_ID] = target_chat_id
-            self.send_message(chat_id, f"✅ Redirection des prédictions de {TARGET_CHANNEL_ID} vers {target_chat_id} configurée.")
-        except ValueError:
-            self.send_message(chat_id, "❌ Format invalide. Utilisation: /redirect [-ID_du_canal] (ex: /redirect -1001234567890)")
-        except Exception:
-            self.send_message(chat_id, "❌ Format invalide. Utilisation: /redirect [-ID_du_canal]")
-
-    def _handle_cos_command(self, chat_id: int, text: str, user_id: int = None) -> None:
-        if not self._is_authorized_user(user_id): return
-        try:
-            _, position_str = text.split()
-            position = int(position_str)
-            if position in [1, 2]:
-                self.card_predictor.set_position_preference(position)
-                self.send_message(chat_id, f"✅ Position de carte préférée mise à jour à {position}.")
-            else:
-                self.send_message(chat_id, "❌ Position invalide. Utilisez 1 ou 2.")
-        except ValueError:
-            self.send_message(chat_id, "❌ Format invalide. Utilisation: /cos [1|2]")
-        except Exception:
-            self.send_message(chat_id, "❌ Format invalide. Utilisation: /cos [1|2]")
-
-    def _handle_regular_message(self, message: Dict[str, Any]) -> None:
-        """Handle non-command messages, focusing on card messages from the target channel"""
-        chat_id = message.get('chat', {}).get('id')
-        text = message.get('text', '')
-
-        # Process messages from the target channel
-        if chat_id == TARGET_CHANNEL_ID:
-            # 1. Prediction attempt (using 10 rules)
-            self._process_card_message(text, source_chat_id=TARGET_CHANNEL_ID)
-            
-            # 2. Verification attempt (checking old predictions)
-            self._process_verification_on_normal_message(text, source_chat_id=TARGET_CHANNEL_ID)
-
-    def _handle_new_chat_members(self, message: Dict[str, Any]) -> None:
-        """Send welcome message to new users"""
-        chat_id = message.get('chat', {}).get('id')
-        for member in message.get('new_chat_members', []):
-            if member.get('is_bot') and member.get('username') == 'JokerDeploy99999_bot': # Replace with your bot's username
-                self.send_message(chat_id, WELCOME_MESSAGE)
-                break
-
-    def _handle_redi_command(self, chat_id: int, sender_chat_id: int, user_id: int = None) -> None:
-        """Shortcut to set redirection to the current channel's ID (useful in channels)"""
-        if not self._is_authorized_user(user_id): return
-        
-        # Check if the command was sent from a channel (sender_chat_id is present)
-        target_id = sender_chat_id if sender_chat_id else chat_id
-        
-        if target_id == chat_id and target_id > 0:
-             self.send_message(chat_id, "❌ Cette commande doit être utilisée dans un canal ou en réponse à un message de canal pour définir la redirection.")
-             return
-             
-        if target_id < -1000000000000 or target_id > -1000000000:
-            self.send_message(chat_id, "❌ ID de canal invalide détecté. Doit être un ID de canal (commence par -100).")
-            return
-            
-        self.card_predictor.set_redirect_channel(TARGET_CHANNEL_ID, target_id)
-        self.redirected_channels[TARGET_CHANNEL_ID] = target_id
-        self.send_message(chat_id, f"✅ Redirection des prédictions de {TARGET_CHANNEL_ID} vers le canal actuel ({target_id}) configurée.")
-
-    def _handle_reset_command(self, sender_chat_id: int, user_id: int = None) -> None:
-        """Reset all predictions and internal states"""
-        if not self._is_authorized_user(user_id): return
-        
-        self.card_predictor.reset_all_predictions()
-        self.redirected_channels.clear()
-        
-        # Send confirmation to the chat where the command was received (sender_chat_id is likely the channel)
-        # Using TARGET_CHANNEL_ID if sender_chat_id is not reliable in all contexts
-        target_chat = sender_chat_id if sender_chat_id else TARGET_CHANNEL_ID
-        
-        # Fallback in case target_chat is not valid, though it should be if called via Telegram
-        if target_chat:
-            self.send_message(target_chat, "🔄 Le système de prédictions, le cooldown et les redirections ont été **complètement réinitialisés**.")
-
-
-    def get_redirect_channel(self, source_chat_id: int) -> int:
-        """Get the target channel for redirection"""
-        # 1. Check predictor instance (persistent config)
-        if self.card_predictor and hasattr(self.card_predictor, 'redirect_channels'):
-            redirect_target = self.card_predictor.redirect_channels.get(source_chat_id)
-            if redirect_target:
-                return redirect_target
-
-        # 2. Check local handler storage (less persistent)
-        local_redirect = self.redirected_channels.get(source_chat_id)
-        if local_redirect:
-            return local_redirect
-
-        # 3. Default channel
-        return PREDICTION_CHANNEL_ID # Utilise le nouveau canal par défaut
-
-    def send_message(self, chat_id: int, text: str) -> Dict[str, Any] | bool:
-        """Send a message using direct API call"""
-        try:
-            url = f"{self.base_url}/sendMessage"
-            data = {
-                'chat_id': chat_id,
-                'text': text,
-                'parse_mode': 'HTML'
-            }
-
-            response = requests.post(url, json=data, timeout=10)
-            result = response.json()
-
-            if result.get('ok'):
-                logger.info(f"Message sent successfully to chat {chat_id}")
-                return result
-            else:
-                logger.error(f"Failed to send message: {result}")
-                return False
-
-        except Exception as e:
-            logger.error(f"Error sending message: {e}")
-            return False
-
-    def send_document(self, chat_id: int, file_path: str) -> bool:
-        """Send a document using direct API call (e.g., deployment package)"""
-        try:
-            url = f"{self.base_url}/sendDocument"
-            
-            with open(file_path, 'rb') as f:
-                files = {'document': f}
-                data = {
-                    'chat_id': chat_id,
-                    'caption': "Voici le package de déploiement (depi_render_n2_fix.zip).",
-                    'parse_mode': 'HTML'
-                }
-
-                response = requests.post(url, data=data, files=files, timeout=60)
-                result = response.json()
-
-                if result.get('ok'):
-                    logger.info(f"Document sent successfully to chat {chat_id}")
-                    return True
-                else:
-                    logger.error(f"Failed to send document: {result}")
-                    return False
-
-        except FileNotFoundError:
-            logger.error(f"File not found: {file_path}")
-            return False
-        except Exception as e:
-            logger.error(f"Error sending document: {e}")
-            return False
-
-    def edit_message(self, chat_id: int, message_id: int, new_text: str) -> bool:
-        """Edit an existing message using direct API call"""
-        try:
-            url = f"{self.base_url}/editMessageText"
-            data = {
-                'chat_id': chat_id,
-                'message_id': message_id,
-                'text': new_text,
-                'parse_mode': 'HTML'
-            }
-
-            response = requests.post(url, json=data, timeout=10)
-            result = response.json()
-
-            if result.get('ok'):
-                logger.info(f"Message edited successfully in chat {chat_id}")
-                return True
-            else:
-                logger.error(f"Failed to edit message: {result}")
-                return False
-
-        except Exception as e:
-            logger.error(f"Error editing message: {e}")
-            return False
+            if user_id and not self._is_authorized_user(user_id):
+                admin_id = int(os.getenv('ADMIN_ID', '1190237801'))
